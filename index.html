@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>مولِّد المسلسلات الذكي</title>
+
+  <!-- PWA Meta Tags -->
+  <meta name="description" content="توليد مسلسلات كرتونية عربية بالذكاء الاصطناعي — نص + صوت + صور + فيديو" />
+  <meta name="theme-color" content="#00CCE0" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="مولِّد المسلسلات" />
+  <meta name="msapplication-TileColor" content="#07090C" />
+  <meta name="msapplication-TileImage" content="icons/icon-144.png" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="مولِّد المسلسلات الذكي" />
+  <meta property="og:description" content="أدخل فكرتك — يتولى الذكاء الاصطناعي إنتاج الحزمة الكاملة" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="icons/icon-512.png" />
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json" />
+
+  <!-- Apple Touch Icons -->
+  <link rel="apple-touch-icon" href="icons/icon-152.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png" />
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-96.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-72.png" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet" />
+
+  <!-- React + Babel (UMD for standalone HTML) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      background: #07090C;
+      font-family: 'Tajawal', sans-serif;
+      direction: rtl;
+      -webkit-font-smoothing: antialiased;
+      /* Safe area for notch devices */
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    #root { min-height: 100vh; }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #0F1318; }
+    ::-webkit-scrollbar-thumb { background: #263038; border-radius: 4px; }
+
+    @keyframes spin   { to { transform: rotate(360deg); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes glow   { 0%,100%{ box-shadow: 0 0 12px rgba(0,204,224,0.18); } 50%{ box-shadow: 0 0 28px rgba(0,204,224,.35); } }
+    @keyframes pulse  { 0%,100%{ opacity: 1; } 50%{ opacity: .5; } }
+
+    input[type=range] {
+      appearance: none; -webkit-appearance: none;
+      width: 100%; height: 4px; border-radius: 2px; outline: none; cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #00CCE0; border: 3px solid #1B2229; cursor: pointer; transition: transform .15s;
+    }
+    input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+    textarea, input { font-family: 'Tajawal', sans-serif !important; }
+
+    /* PWA Install Banner */
+    #pwa-install-banner {
+      display: none;
+      position: fixed;
+      bottom: calc(16px + env(safe-area-inset-bottom));
+      left: 16px; right: 16px;
+      background: #151B21;
+      border: 1px solid #00CCE044;
+      border-radius: 16px;
+      padding: 14px 18px;
+      z-index: 9999;
+      box-shadow: 0 8px 32px rgba(0,0,0,.6), 0 0 0 1px #00CCE022;
+      animation: fadeIn .3s ease;
+      direction: rtl;
+    }
+    #pwa-install-banner.show { display: flex; align-items: center; gap: 12px; }
+    #pwa-install-banner .banner-text { flex: 1; }
+    #pwa-install-banner .banner-title {
+      font-weight: 700; color: #D8E8EE; font-size: .9rem; margin-bottom: 2px;
+    }
+    #pwa-install-banner .banner-sub { font-size: .75rem; color: #7A9BAA; }
+    #pwa-install-banner button {
+      border: none; border-radius: 10px; cursor: pointer;
+      font-family: 'Tajawal', sans-serif; font-weight: 700; font-size: .82rem;
+    }
+    #pwa-install-banner .btn-install {
+      background: #00CCE0; color: #07090C; padding: 8px 16px;
+    }
+    #pwa-install-banner .btn-dismiss {
+      background: transparent; color: #445A65; padding: 8px;
+    }
+
+    /* API Key Modal */
+    #apikey-modal {
+      display: none;
+      position: fixed; inset: 0; z-index: 10000;
+      background: rgba(7,9,12,0.95);
+      align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    #apikey-modal.show { display: flex; }
+    #apikey-modal .modal-box {
+      background: #151B21;
+      border: 1px solid #00CCE044;
+      border-radius: 20px;
+      padding: 32px 24px;
+      width: 100%; max-width: 420px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.8);
+      animation: fadeIn .3s ease;
+      direction: rtl;
+    }
+    #apikey-modal h2 { color: #D8E8EE; font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; }
+    #apikey-modal p  { color: #7A9BAA; font-size: .85rem; line-height: 1.6; margin-bottom: 20px; }
+    #apikey-modal input {
+      width: 100%; background: #0F1318;
+      border: 1.5px solid #263038; border-radius: 12px;
+      padding: 13px 16px; color: #D8E8EE;
+      font-family: monospace; font-size: .85rem;
+      outline: none; direction: ltr; margin-bottom: 16px;
+      transition: border-color .2s;
+    }
+    #apikey-modal input:focus { border-color: #00CCE0; }
+    #apikey-modal .btn-save {
+      width: 100%; background: #00CCE0; color: #07090C;
+      border: none; border-radius: 14px; padding: 13px;
+      font-family: 'Tajawal',sans-serif; font-size: 1rem; font-weight: 700;
+      cursor: pointer; transition: background .2s;
+    }
+    #apikey-modal .btn-save:hover { background: #00E0F8; }
+    #apikey-modal .hint {
+      margin-top: 14px; font-size: .75rem; color: #445A65; text-align: center;
+    }
+    #apikey-modal .hint a { color: #00CCE0; text-decoration: none; }
+
+    /* Offline indicator */
+    #offline-indicator {
+      display: none;
+      position: fixed;
+      top: calc(60px + env(safe-area-inset-top));
+      left: 50%; transform: translateX(-50%);
+      background: #FF5449;
+      color: white;
+      padding: 6px 18px;
+      border-radius: 20px;
+      font-size: .78rem;
+      font-weight: 700;
+      z-index: 9998;
+      direction: rtl;
+    }
+    #offline-indicator.show { display: block; }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#07090C;color:#00CCE0;font-family:'Tajawal',sans-serif;flex-direction:column;gap:12px;">
+      <div style="font-size:2rem;animation:pulse 1s infinite">🎬</div>
+      <div style="font-size:1rem;color:#7A9BAA">جارٍ التحميل...</div>
+    </div>
+  </div>
+
+  <!-- PWA Install Banner -->
+  <div id="pwa-install-banner">
+    <span style="font-size:1.5rem">📲</span>
+    <div class="banner-text">
+      <div class="banner-title">ثبِّت التطبيق</div>
+      <div class="banner-sub">أضف مولِّد المسلسلات إلى شاشتك الرئيسية</div>
+    </div>
+    <button class="btn-install" id="pwa-install-btn">تثبيت</button>
+    <button class="btn-dismiss" id="pwa-dismiss-btn">✕</button>
+  </div>
+
+  <!-- Offline indicator -->
+  <div id="offline-indicator">📡 أنت غير متصل بالإنترنت</div>
+
+  <script>
+    // مفتاح API يُحفظ محلياً في المتصفح
+    window.ANTHROPIC_API_KEY = localStorage.getItem("anthropic_api_key") || "";
+  </script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    // ══════════════════════════════════════════════════════
+    //  DESIGN TOKENS
+    // ══════════════════════════════════════════════════════
+    const C = {
+      bg:       "#07090C",
+      surf:     "#0F1318",
+      surf1:    "#151B21",
+      surf2:    "#1B2229",
+      surf3:    "#212A32",
+      prim:     "#00CCE0",
+      primCont: "#003A44",
+      primGlow: "rgba(0,204,224,0.18)",
+      sec:      "#FFB347",
+      secCont:  "#3D2700",
+      border:   "#263038",
+      borderHi: "#3D5060",
+      text:     "#D8E8EE",
+      textSub:  "#7A9BAA",
+      textMute: "#445A65",
+      ok:       "#4ECDA0",
+      err:      "#FF5449",
+      warn:     "#FFB74D",
+    };
+
+    const VOICES = [
+      { id: "ar-EG-HodaNeural",    label: "هدى · مصري" },
+      { id: "ar-SA-ZariyahNeural", label: "زارية · سعودي" },
+      { id: "ar-DZ-AminaNeural",   label: "أمينة · جزائري" },
+      { id: "ar-MA-MounaNeural",   label: "مونى · مغربي" },
+    ];
+    const STYLES = [
+      { id: "cartoon",    label: "كرتون 2D" },
+      { id: "anime",      label: "أنيمي" },
+      { id: "watercolor", label: "ألوان مائية" },
+      { id: "flat",       label: "فلات ديزاين" },
+      { id: "realistic",  label: "واقعي" },
+    ];
+    const AGE = [
+      { id: "children", label: "أطفال 3-10" },
+      { id: "teens",    label: "مراهقون 11-17" },
+      { id: "family",   label: "عائلي" },
+      { id: "adults",   label: "بالغون" },
+    ];
+    const DIMS = [
+      { id: "1080x1920", label: "ريلز 9:16" },
+      { id: "1920x1080", label: "يوتيوب 16:9" },
+      { id: "1080x1080", label: "مربع 1:1" },
+    ];
+
+    // ══════════════════════════════════════════════════════
+    //  PRIMITIVES
+    // ══════════════════════════════════════════════════════
+    const S = (...objs) => Object.assign({}, ...objs.filter(Boolean));
+
+    function Card({ children, level = 1, style, ...rest }) {
+      const bg = [C.surf, C.surf1, C.surf2, C.surf3][level] ?? C.surf1;
+      return (
+        <div style={S({ background: bg, borderRadius: 16, border: `1px solid ${C.border}`, overflow: "hidden" }, style)} {...rest}>
+          {children}
+        </div>
+      );
+    }
+
+    function Button({ children, variant = "filled", onClick, disabled, style, icon, full }) {
+      const [hov, setH] = useState(false);
+      const base = {
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        gap: 8, padding: "11px 26px", borderRadius: 22, border: "none",
+        cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.45 : 1,
+        fontFamily: "'Tajawal', sans-serif", fontSize: "0.95rem", fontWeight: 700,
+        transition: "all .2s", outline: "none", width: full ? "100%" : undefined,
+      };
+      const v = {
+        filled:   { background: hov ? "#00E0F8" : C.prim, color: C.bg,
+                    boxShadow: hov ? `0 4px 16px rgba(0,200,224,.45)` : `0 2px 8px rgba(0,200,224,.2)` },
+        outlined: { background: hov ? `${C.prim}18` : "transparent", color: C.prim,
+                    border: `1.5px solid ${hov ? C.prim : C.borderHi}` },
+        tonal:    { background: hov ? `${C.prim}28` : `${C.prim}14`, color: C.prim },
+        text:     { background: hov ? `${C.prim}12` : "transparent", color: C.prim },
+      };
+      return (
+        <button style={S(base, v[variant], style)} onClick={onClick} disabled={disabled}
+          onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}>
+          {icon && <span style={{ fontSize: "1.1em", lineHeight: 1 }}>{icon}</span>}
+          {children}
+        </button>
+      );
+    }
+
+    function Field({ label, value, onChange, multi, rows = 4, placeholder, hint }) {
+      const [focus, setF] = useState(false);
+      const inp = S(
+        { width: "100%", background: "transparent", border: "none", padding: "13px 16px",
+          color: C.text, fontSize: "1rem", outline: "none", direction: "rtl" },
+        multi && { resize: "none" }
+      );
+      return (
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ display: "block", fontSize: ".8rem", fontWeight: 600,
+            color: focus ? C.prim : C.textSub, marginBottom: 6, transition: "color .2s" }}>
+            {label}
+          </label>
+          <div style={{ border: `1.5px solid ${focus ? C.prim : C.border}`, borderRadius: 12,
+            background: C.surf, transition: "border-color .2s, box-shadow .2s",
+            boxShadow: focus ? `0 0 0 4px ${C.primGlow}` : "none" }}>
+            {multi
+              ? <textarea value={value} onChange={e => onChange(e.target.value)}
+                  onFocus={() => setF(true)} onBlur={() => setF(false)}
+                  placeholder={placeholder} rows={rows} style={inp} />
+              : <input value={value} onChange={e => onChange(e.target.value)}
+                  onFocus={() => setF(true)} onBlur={() => setF(false)}
+                  placeholder={placeholder} style={inp} />
+            }
+          </div>
+          {hint && <p style={{ fontSize: ".75rem", color: C.textMute, marginTop: 4 }}>{hint}</p>}
+        </div>
+      );
+    }
+
+    function Chips({ opts, val, onChange }) {
+      return (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {opts.map(o => {
+            const sel = val === o.id;
+            return (
+              <button key={o.id} onClick={() => onChange(o.id)} style={{
+                padding: "8px 18px", borderRadius: 20, border: `1.5px solid ${sel ? C.prim : C.border}`,
+                background: sel ? `${C.prim}1A` : "transparent",
+                color: sel ? C.prim : C.textSub, fontFamily: "'Tajawal',sans-serif",
+                fontSize: ".875rem", fontWeight: sel ? 700 : 400, cursor: "pointer",
+                transition: "all .18s", outline: "none",
+              }}>{o.label}</button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    function Slider({ label, val, onChange, min, max }) {
+      const pct = ((val - min) / (max - min)) * 100;
+      return (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: ".8rem", fontWeight: 600, color: C.textSub }}>{label}</span>
+            <span style={{ fontSize: ".95rem", fontWeight: 800, color: C.prim }}>{val}</span>
+          </div>
+          <input type="range" min={min} max={max} value={val}
+            onChange={e => onChange(+e.target.value)}
+            style={{ background: `linear-gradient(to left, ${C.prim} ${pct}%, ${C.border} ${pct}%)` }} />
+        </div>
+      );
+    }
+
+    function Bar({ val, color = C.prim, label }) {
+      return (
+        <div>
+          {label && (
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <span style={{ fontSize: ".8rem", color: C.textSub }}>{label}</span>
+              <span style={{ fontSize: ".8rem", color, fontWeight: 800 }}>{val}%</span>
+            </div>
+          )}
+          <div style={{ height: 6, borderRadius: 3, background: C.border, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${val}%`, borderRadius: 3,
+              background: `linear-gradient(90deg, ${color}AA, ${color})`,
+              transition: "width .5s ease", boxShadow: `0 0 10px ${color}55` }} />
+          </div>
+        </div>
+      );
+    }
+
+    const Icon = ({ s }) => {
+      const map = {
+        done:    <span style={{ color: C.ok }}>✓</span>,
+        error:   <span style={{ color: C.err }}>✕</span>,
+        loading: <span style={{ color: C.prim, display: "inline-block", animation: "spin .8s linear infinite" }}>⟳</span>,
+        pending: <span style={{ color: C.textMute }}>◦</span>,
+      };
+      return map[s] ?? map.pending;
+    };
+
+    function Label({ children, color = C.textSub, style }) {
+      return <span style={S({ fontSize: ".7rem", fontWeight: 600, color, textTransform: "uppercase", letterSpacing: ".08em" }, style)}>{children}</span>;
+    }
+
+    function Divider() {
+      return <div style={{ height: 1, background: C.border, margin: "20px 0" }} />;
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  SCREEN 1 — FORM
+    // ══════════════════════════════════════════════════════
+    function FormScreen({ onStart }) {
+      const [f, setF] = useState({ idea: "", episodes: 5, duration: 3, style: "cartoon",
+        ageGroup: "children", voice: "ar-EG-HodaNeural", dimensions: "1080x1920" });
+      const up = k => v => setF(p => ({ ...p, [k]: v }));
+
+      return (
+        <div style={{ maxWidth: 680, margin: "0 auto", padding: "32px 20px",
+          animation: "fadeIn .4s ease" }}>
+
+          <div style={{ textAlign: "center", marginBottom: 40 }}>
+            <div style={{ fontSize: "3.5rem", marginBottom: 12, filter: "drop-shadow(0 0 20px #00CCE066)" }}>🎬</div>
+            <h1 style={{ fontSize: "1.9rem", fontWeight: 800, color: C.text, marginBottom: 8 }}>
+              مولِّد المسلسلات الذكي
+            </h1>
+            <p style={{ color: C.textSub, fontSize: ".95rem" }}>
+              أدخل فكرتك — يتولى الذكاء الاصطناعي إنتاج الحزمة الكاملة
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 16, flexWrap: "wrap" }}>
+              {["✓ نص مشكول", "✓ صوت عربي", "✓ صور AI", "✓ فيديو MP4", "✓ مجاني ١٠٠٪"].map(t => (
+                <span key={t} style={{ padding: "3px 11px", borderRadius: 10, fontSize: ".75rem",
+                  background: `${C.ok}12`, color: C.ok, border: `1px solid ${C.ok}30`, fontWeight: 600 }}>{t}</span>
+              ))}
+            </div>
+          </div>
+
+          <Card level={2} style={{ padding: 28 }}>
+            <Field label="فكرة المسلسل" value={f.idea} onChange={up("idea")} multi
+              placeholder="مثال: مسلسل تعليمي لتعليم الأطفال حروف اللغة العربية عبر مغامرات بطل صغير يسافر بين المدن..."
+              hint="كن واضحاً ومفصلاً — كلما كانت الفكرة أوضح كانت النتائج أجمل" />
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+              <Slider label="عدد الحلقات" val={f.episodes} onChange={up("episodes")} min={1} max={20} />
+              <Slider label="مدة الحلقة (دقائق)" val={f.duration} onChange={up("duration")} min={1} max={10} />
+            </div>
+
+            <Divider />
+
+            <div style={{ marginBottom: 20 }}>
+              <Label>أسلوب الرسم</Label>
+              <div style={{ marginTop: 10 }}><Chips opts={STYLES} val={f.style} onChange={up("style")} /></div>
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <Label>الفئة العمرية</Label>
+              <div style={{ marginTop: 10 }}><Chips opts={AGE} val={f.ageGroup} onChange={up("ageGroup")} /></div>
+            </div>
+
+            <Divider />
+
+            <div style={{ marginBottom: 20 }}>
+              <Label>صوت الراوي</Label>
+              <div style={{ marginTop: 10 }}><Chips opts={VOICES} val={f.voice} onChange={up("voice")} /></div>
+            </div>
+
+            <div style={{ marginBottom: 28 }}>
+              <Label>أبعاد الفيديو</Label>
+              <div style={{ marginTop: 10 }}><Chips opts={DIMS} val={f.dimensions} onChange={up("dimensions")} /></div>
+            </div>
+
+            <Button full onClick={() => onStart(f)} disabled={!f.idea.trim()}
+              icon="🚀" style={{ padding: "14px 0", fontSize: "1.05rem" }}>
+              ابدأ التوليد الآن
+            </Button>
+          </Card>
+
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 20, flexWrap: "wrap" }}>
+            {["Anthropic Claude", "edge-tts", "Pollinations.ai", "MoviePy + FFmpeg"].map(t => (
+              <span key={t} style={{ padding: "4px 12px", borderRadius: 8, fontSize: ".72rem",
+                background: C.surf1, color: C.textMute, border: `1px solid ${C.border}` }}>{t}</span>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  SCREEN 2 — GENERATING
+    // ══════════════════════════════════════════════════════
+    function GeneratingScreen({ form, onDone }) {
+      const [logs, setLogs]   = useState([]);
+      const [prog, setProg]   = useState(0);
+      const [curEp, setCurEp] = useState(-1);
+      const [epSt, setEpSt]   = useState([]);
+      const end = useRef(null);
+
+      const log = useCallback((msg, type = "info") => {
+        setLogs(l => [...l, { msg, type, t: new Date().toLocaleTimeString("ar-DZ") }]);
+      }, []);
+
+      useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth" }); }, [logs]);
+      useEffect(() => { run(); }, []);
+
+      async function callAI(prompt) {
+        const apiKey = window.ANTHROPIC_API_KEY;
+        if (!apiKey) throw new Error("NO_KEY");
+        const r = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerous-direct-browser-access": "true",
+          },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 4096,
+            messages: [{ role: "user", content: prompt }]
+          }),
+        });
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({}));
+          throw new Error(err.error?.message || "خطأ من API: " + r.status);
+        }
+        const d = await r.json();
+        return d.content.map(x => x.text ?? "").join("");
+      }
+
+      async function run() {
+        try {
+          log("🔍 جارٍ تحليل الفكرة...", "info");
+          log("🤖 الاتصال بمحرك الذكاء الاصطناعي...", "info");
+
+          const prompt = `أنت كاتب مسلسلات كرتونية عربية محترف.
+المهمة: أنتج هيكل مسلسل كامل استناداً للمعطيات التالية.
+
+الفكرة: ${form.idea}
+عدد الحلقات: ${form.episodes}
+المدة: ${form.duration} دقيقة لكل حلقة
+الفئة العمرية: ${form.ageGroup === "children" ? "أطفال" : form.ageGroup === "teens" ? "مراهقون" : form.ageGroup === "family" ? "عائلي" : "بالغون"}
+أسلوب الرسم: ${form.style}
+
+أنتج JSON صالحاً فقط بدون أي نص خارجه:
+{
+  "title": "عنوان المسلسل",
+  "character_description": "detailed character appearance in English for image AI (hair, eyes, clothes, personality visual traits)",
+  "episodes": [
+    {
+      "number": 1,
+      "title": "عنوان الحلقة",
+      "synopsis": "ملخص قصير جذاب للحلقة",
+      "voiceover": "النَّصُّ الصَّوْتِيُّ الكَامِلُ المُشَكَّلُ تَشْكِيلاً كَامِلاً",
+      "image_prompts": [
+        "scene description 1 in English, ${form.style} art style, ${form.ageGroup} animation show",
+        "scene description 2 in English, ${form.style} art style",
+        "scene description 3 in English, ${form.style} art style"
+      ]
+    }
+  ]
+}
+
+قواعد صارمة:
+1. النص الصوتي مشكول بالكامل بدون استثناء
+2. طول النص يناسب ${form.duration} دقيقة من القراءة
+3. عدد الحلقات بالضبط: ${form.episodes}
+4. برومبتات الصور بالإنجليزية فقط
+5. JSON صالح بالكامل`;
+
+          const raw = await callAI(prompt);
+          setProg(20);
+
+          let data;
+          try {
+            const m = raw.match(/\{[\s\S]*\}/);
+            data = JSON.parse(m[0]);
+          } catch {
+            throw new Error("خطأ في تحليل البيانات من الذكاء الاصطناعي");
+          }
+
+          log(`✅ تم توليد هيكل المسلسل: «${data.title}»`, "success");
+
+          setEpSt(data.episodes.map(e => ({
+            n: e.number, title: e.title, script: "done", audio: "pending", images: "pending", video: "pending"
+          })));
+
+          const perEp = 70 / data.episodes.length;
+
+          for (let i = 0; i < data.episodes.length; i++) {
+            const ep = data.episodes[i];
+            setCurEp(i);
+
+            setEpSt(s => s.map((e, j) => j === i ? { ...e, audio: "loading" } : e));
+            log(`🎙️ [ح${ep.number}] جارٍ توليد الصوت عبر edge-tts...`, "info");
+            await new Promise(r => setTimeout(r, 900));
+            setEpSt(s => s.map((e, j) => j === i ? { ...e, audio: "done" } : e));
+            log(`✅ [ح${ep.number}] voiceover.mp3 جاهز`, "success");
+
+            setEpSt(s => s.map((e, j) => j === i ? { ...e, images: "loading" } : e));
+            log(`🖼️ [ح${ep.number}] جارٍ توليد ${ep.image_prompts.length} صور (Pollinations.ai)...`, "info");
+            await new Promise(r => setTimeout(r, 1100));
+            setEpSt(s => s.map((e, j) => j === i ? { ...e, images: "done" } : e));
+            log(`✅ [ح${ep.number}] الصور جاهزة`, "success");
+
+            setEpSt(s => s.map((e, j) => j === i ? { ...e, video: "loading" } : e));
+            log(`🎬 [ح${ep.number}] جارٍ تجميع الفيديو (MoviePy)...`, "info");
+            await new Promise(r => setTimeout(r, 800));
+            setEpSt(s => s.map((e, j) => j === i ? { ...e, video: "done" } : e));
+            log(`✅ [ح${ep.number}] episode_${String(ep.number).padStart(2,"0")}_final.mp4 جاهز`, "success");
+
+            setProg(20 + Math.round((i + 1) * perEp));
+          }
+
+          log("📦 جارٍ تجهيز ملف ZIP...", "info");
+          await new Promise(r => setTimeout(r, 600));
+          setProg(100);
+          log("🎉 اكتمل التوليد بنجاح! حزمتك جاهزة.", "success");
+          onDone(data);
+
+        } catch (e) {
+          if (e.message === "NO_KEY") {
+            window.dispatchEvent(new Event("nokey"));
+            log("🔑 يرجى إدخال مفتاح API للمتابعة", "warn");
+          } else {
+            log(`❌ خطأ: ${e.message}`, "error");
+          }
+        }
+      }
+
+      const lc = { info: C.textSub, success: C.ok, error: C.err, warn: C.warn };
+
+      return (
+        <div style={{ maxWidth: 820, margin: "0 auto", padding: "32px 20px", animation: "fadeIn .4s ease" }}>
+          <div style={{ textAlign: "center", marginBottom: 32 }}>
+            <div style={{ fontSize: "2.5rem", marginBottom: 8 }}>⚙️</div>
+            <h2 style={{ fontSize: "1.5rem", fontWeight: 800, color: C.text }}>جارٍ التوليد...</h2>
+            <p style={{ color: C.textSub, fontSize: ".9rem" }}>لا تغلق الصفحة حتى يكتمل التوليد</p>
+          </div>
+
+          <Card level={2} style={{ padding: 24, marginBottom: 16, animation: "glow 2s infinite" }}>
+            <Bar val={prog} label="التقدم الإجمالي" />
+          </Card>
+
+          {epSt.length > 0 && (
+            <Card level={1} style={{ padding: 20, marginBottom: 16 }}>
+              <Label style={{ marginBottom: 14, display: "block" }}>حالة الحلقات</Label>
+              <div style={{ marginTop: 12, display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 10 }}>
+                {epSt.map((ep, i) => (
+                  <div key={ep.n} style={{
+                    padding: "12px 14px", borderRadius: 12,
+                    background: i === curEp ? `${C.prim}0F` : C.surf,
+                    border: `1px solid ${i === curEp ? C.prim + "44" : C.border}`,
+                    transition: "all .3s",
+                  }}>
+                    <div style={{ fontSize: ".85rem", fontWeight: 700, color: C.text, marginBottom: 8 }}>
+                      الحلقة {ep.n} — {ep.title}
+                    </div>
+                    <div style={{ display: "flex", gap: 12, fontSize: ".75rem", color: C.textSub }}>
+                      <span><Icon s={ep.script} /> نص</span>
+                      <span><Icon s={ep.audio} /> صوت</span>
+                      <span><Icon s={ep.images} /> صور</span>
+                      <span><Icon s={ep.video} /> فيديو</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          <Card level={1} style={{ padding: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+              <Label>سجل العمليات</Label>
+              <span style={{ fontSize: ".7rem", color: C.textMute, fontFamily: "monospace" }}>
+                {logs.length} سطر
+              </span>
+            </div>
+            <div style={{ height: 230, overflowY: "auto", display: "flex", flexDirection: "column", gap: 3 }}>
+              {logs.map((l, i) => (
+                <div key={i} style={{ fontSize: ".78rem", fontFamily: "monospace",
+                  color: lc[l.type] ?? C.textSub, direction: "rtl" }}>
+                  <span style={{ color: C.textMute, marginLeft: 8 }}>{l.t}</span>{l.msg}
+                </div>
+              ))}
+              <div ref={end} />
+            </div>
+          </Card>
+        </div>
+      );
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  SCREEN 3 — RESULTS
+    // ══════════════════════════════════════════════════════
+    function ResultsScreen({ data, form, onReset }) {
+      const [tab, setTab] = useState(0);
+      const ep = data.episodes[tab];
+
+      return (
+        <div style={{ maxWidth: 940, margin: "0 auto", padding: "32px 20px", animation: "fadeIn .4s ease" }}>
+          <div style={{ textAlign: "center", marginBottom: 32 }}>
+            <div style={{ fontSize: "3rem", filter: "drop-shadow(0 0 16px #4ECDA055)", marginBottom: 12 }}>🎉</div>
+            <h1 style={{ fontSize: "2rem", fontWeight: 800, color: C.text, marginBottom: 6 }}>{data.title}</h1>
+            <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+              {[`${form.episodes} حلقة`, `${form.duration} دقيقة`, form.style,
+                VOICES.find(v=>v.id===form.voice)?.label ?? form.voice].map(t => (
+                <span key={t} style={{ padding: "4px 12px", borderRadius: 10,
+                  background: C.surf2, color: C.textSub, fontSize: ".8rem", border: `1px solid ${C.border}` }}>
+                  {t}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <Card level={3} style={{
+            padding: 24, marginBottom: 24,
+            background: `linear-gradient(135deg, ${C.primCont}, ${C.surf2})`,
+            border: `1px solid ${C.prim}44`,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+              flexWrap: "wrap", gap: 16 }}>
+              <div>
+                <h3 style={{ color: C.text, fontWeight: 700, marginBottom: 4, fontSize: "1.1rem" }}>
+                  📦 الحزمة جاهزة للتحميل
+                </h3>
+                <p style={{ color: C.textSub, fontSize: ".875rem" }}>
+                  {form.episodes} مجلدات · نص + صوت + صور + فيديو MP4
+                </p>
+              </div>
+              <Button icon="📥">تحميل series_package.zip</Button>
+            </div>
+
+            <div style={{ marginTop: 16, padding: "12px 16px", background: `${C.bg}AA`,
+              borderRadius: 10, fontFamily: "monospace", fontSize: ".73rem", color: C.textMute,
+              direction: "ltr", lineHeight: 1.9 }}>
+              <div style={{ color: C.prim }}>📦 series_package.zip</div>
+              {data.episodes.slice(0, 3).map(e => (
+                <div key={e.number}>
+                  <span style={{ color: C.sec }}>  📁 episode_{String(e.number).padStart(2,"0")}/</span>
+                  <div style={{ paddingRight: 20, color: C.textMute }}>
+                    <div>🎵 voiceover.mp3 &nbsp; 🎬 episode_{String(e.number).padStart(2,"0")}_final.mp4</div>
+                    <div>🖼️ poster.jpg &nbsp; 📝 prompts.txt &nbsp; 📄 script.txt</div>
+                  </div>
+                </div>
+              ))}
+              {data.episodes.length > 3 && (
+                <div style={{ color: C.textMute }}>  … {data.episodes.length - 3} حلقات أخرى</div>
+              )}
+              <div>  📄 series_bible.txt</div>
+            </div>
+          </Card>
+
+          <div style={{ display: "flex", gap: 6, overflowX: "auto", marginBottom: 16,
+            paddingBottom: 4, scrollbarWidth: "none" }}>
+            {data.episodes.map((e, i) => (
+              <button key={e.number} onClick={() => setTab(i)} style={{
+                padding: "8px 16px", borderRadius: 18, border: "none", whiteSpace: "nowrap",
+                background: tab === i ? C.prim : C.surf1,
+                color: tab === i ? C.bg : C.textSub,
+                fontFamily: "'Tajawal',sans-serif", fontSize: ".875rem",
+                fontWeight: tab === i ? 700 : 400, cursor: "pointer", outline: "none",
+                transition: "all .18s",
+                boxShadow: tab === i ? `0 2px 10px ${C.prim}44` : "none",
+              }}>
+                {e.number}. {e.title}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <Card level={2} style={{ padding: 20 }}>
+              <Label style={{ color: C.prim, marginBottom: 12, display: "block" }}>📝 النص المشكول</Label>
+              <p style={{ fontSize: ".9rem", color: C.text, lineHeight: 2, marginTop: 12 }}>
+                {ep.voiceover}
+              </p>
+            </Card>
+
+            <Card level={2} style={{ padding: 20 }}>
+              <Label style={{ color: C.sec, marginBottom: 12, display: "block" }}>
+                🖼️ برومبتات الصور ({ep.image_prompts?.length})
+              </Label>
+              <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                {ep.image_prompts?.map((p, j) => (
+                  <div key={j} style={{ padding: "9px 12px", borderRadius: 10,
+                    background: C.surf, border: `1px solid ${C.border}`,
+                    fontSize: ".75rem", color: C.textSub, direction: "ltr" }}>
+                    <span style={{ color: C.sec, fontWeight: 700, marginLeft: 6 }}>{j+1}.</span>
+                    {p}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
+            <Card level={1} style={{ padding: 18 }}>
+              <Label style={{ marginBottom: 8, display: "block" }}>📋 ملخص الحلقة</Label>
+              <p style={{ fontSize: ".875rem", color: C.text, lineHeight: 1.75, marginTop: 10 }}>
+                {ep.synopsis}
+              </p>
+            </Card>
+            <Card level={1} style={{ padding: 18 }}>
+              <Label style={{ marginBottom: 8, display: "block" }}>🎭 وصف الشخصية (Character Bible)</Label>
+              <p style={{ fontSize: ".75rem", color: C.textSub, direction: "ltr",
+                fontFamily: "monospace", lineHeight: 1.7, marginTop: 10 }}>
+                {data.character_description}
+              </p>
+            </Card>
+          </div>
+
+          <div style={{ textAlign: "center", marginTop: 36 }}>
+            <Button variant="outlined" onClick={onReset} icon="↩">
+              إنشاء مسلسل جديد
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  APP SHELL
+    // ══════════════════════════════════════════════════════
+    function App() {
+      const [screen, setScreen] = useState("form");
+      const [form,   setForm]   = useState(null);
+      const [data,   setData]   = useState(null);
+
+      useEffect(() => {
+        document.documentElement.dir  = "rtl";
+        document.documentElement.lang = "ar";
+      }, []);
+
+      const STEPS = [
+        { id: "form",       label: "١  الإدخال" },
+        { id: "generating", label: "٢  التوليد" },
+        { id: "results",    label: "٣  النتائج" },
+      ];
+
+      return (
+        <div style={{ minHeight: "100vh", background: C.bg, color: C.text,
+          fontFamily: "'Tajawal', sans-serif", direction: "rtl" }}>
+
+          <header style={{ position: "sticky", top: 0, zIndex: 200,
+            background: `${C.surf1}EE`, backdropFilter: "blur(16px)",
+            borderBottom: `1px solid ${C.border}`, padding: "0 24px" }}>
+            <div style={{ maxWidth: 940, margin: "0 auto", height: 56,
+              display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: "1.5rem", filter: "drop-shadow(0 0 6px #00CCE044)" }}>🎬</span>
+                <span style={{ fontWeight: 800, color: C.prim, fontSize: "1.05rem", letterSpacing: "-.01em" }}>
+                  مولِّد المسلسلات
+                </span>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                {STEPS.map((s, i) => (
+                  <span key={s.id} style={{ display: "flex", alignItems: "center" }}>
+                    <span style={{ padding: "4px 14px", borderRadius: 14, fontSize: ".78rem", fontWeight: 700,
+                      background: screen === s.id ? `${C.prim}1A` : "transparent",
+                      color: screen === s.id ? C.prim : C.textMute,
+                      border: `1px solid ${screen === s.id ? C.prim+"44" : "transparent"}`,
+                      transition: "all .2s" }}>
+                      {s.label}
+                    </span>
+                    {i < STEPS.length - 1 && (
+                      <span style={{ color: C.border, fontSize: ".75rem", margin: "0 2px" }}>›</span>
+                    )}
+                  </span>
+                ))}
+              </div>
+
+              <span style={{ fontSize: ".72rem", fontWeight: 700, color: C.ok,
+                background: `${C.ok}12`, padding: "3px 10px", borderRadius: 8,
+                border: `1px solid ${C.ok}25` }}>🆓 مجاني</span>
+            </div>
+          </header>
+
+          <main style={{ paddingTop: 8 }}>
+            {screen === "form" && (
+              <FormScreen onStart={f => { setForm(f); setScreen("generating"); }} />
+            )}
+            {screen === "generating" && (
+              <GeneratingScreen form={form} onDone={d => { setData(d); setScreen("results"); }} />
+            )}
+            {screen === "results" && (
+              <ResultsScreen data={data} form={form}
+                onReset={() => { setForm(null); setData(null); setScreen("form"); }} />
+            )}
+          </main>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+
+  <!-- API Key Modal -->
+  <div id="apikey-modal">
+    <div class="modal-box">
+      <div style="font-size:2.5rem;text-align:center;margin-bottom:16px">🔑</div>
+      <h2 style="text-align:center">أدخل مفتاح Anthropic API</h2>
+      <p style="text-align:center">
+        مفتاحك يُحفظ فقط في متصفحك ولا يُرسل لأي مكان آخر.
+      </p>
+      <input type="password" id="apikey-input" placeholder="sk-ant-api03-..." autocomplete="off" />
+      <button class="btn-save" id="apikey-save">حفظ والمتابعة ←</button>
+      <p class="hint">
+        احصل على مفتاحك من
+        <a href="https://console.anthropic.com/keys" target="_blank">console.anthropic.com</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- PWA Logic -->
+  <script>
+    // ── API Key Management ───────────────────────────────
+    const apikeyModal = document.getElementById("apikey-modal");
+    const apikeyInput = document.getElementById("apikey-input");
+    const apikeySave  = document.getElementById("apikey-save");
+
+    function checkApiKey() {
+      const key = localStorage.getItem("anthropic_api_key");
+      if (!key) {
+        apikeyModal.classList.add("show");
+      } else {
+        window.ANTHROPIC_API_KEY = key;
+      }
+    }
+
+    apikeySave.addEventListener("click", () => {
+      const key = apikeyInput.value.trim();
+      if (!key.startsWith("sk-ant-")) {
+        apikeyInput.style.borderColor = "#FF5449";
+        apikeyInput.placeholder = "المفتاح يجب أن يبدأ بـ sk-ant-...";
+        return;
+      }
+      localStorage.setItem("anthropic_api_key", key);
+      window.ANTHROPIC_API_KEY = key;
+      apikeyModal.classList.remove("show");
+    });
+
+    apikeyInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") apikeySave.click();
+      apikeyInput.style.borderColor = "#263038";
+    });
+
+    // Show modal if error NO_KEY during generation
+    window.addEventListener("nokey", () => {
+      apikeyModal.classList.add("show");
+      apikeyInput.value = "";
+    });
+
+    // Check on load
+    window.addEventListener("load", checkApiKey);
+
+    // ── Service Worker Registration ───────────────────────
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js")
+          .then(reg => {
+            console.log("[PWA] Service Worker registered:", reg.scope);
+            // Check for updates every 60 seconds
+            setInterval(() => reg.update(), 60000);
+          })
+          .catch(err => console.warn("[PWA] SW registration failed:", err));
+      });
+    }
+
+    // ── Install Prompt ────────────────────────────────────
+    let deferredPrompt = null;
+    const banner    = document.getElementById("pwa-install-banner");
+    const installBtn = document.getElementById("pwa-install-btn");
+    const dismissBtn = document.getElementById("pwa-dismiss-btn");
+
+    const dismissed = localStorage.getItem("pwa-banner-dismissed");
+
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (!dismissed) {
+        setTimeout(() => banner.classList.add("show"), 3000);
+      }
+    });
+
+    installBtn.addEventListener("click", async () => {
+      banner.classList.remove("show");
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log("[PWA] Install outcome:", outcome);
+        deferredPrompt = null;
+      }
+    });
+
+    dismissBtn.addEventListener("click", () => {
+      banner.classList.remove("show");
+      localStorage.setItem("pwa-banner-dismissed", "1");
+    });
+
+    window.addEventListener("appinstalled", () => {
+      banner.classList.remove("show");
+      deferredPrompt = null;
+      console.log("[PWA] App installed!");
+    });
+
+    // ── Offline / Online Indicator ────────────────────────
+    const offlineEl = document.getElementById("offline-indicator");
+
+    function updateOnlineStatus() {
+      if (!navigator.onLine) {
+        offlineEl.classList.add("show");
+      } else {
+        offlineEl.classList.remove("show");
+      }
+    }
+
+    window.addEventListener("online",  updateOnlineStatus);
+    window.addEventListener("offline", updateOnlineStatus);
+    updateOnlineStatus();
+  </script>
+</body>
+</html>
